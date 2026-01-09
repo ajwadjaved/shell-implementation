@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     // Enable latest features
-    "lib": ["ESNext", "DOM", "Node"],
+    "lib": ["ESNext", "DOM"],
+    "types": ["node"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
