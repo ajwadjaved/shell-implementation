@@ -73,25 +73,19 @@ async function main(): Promise<void> {
         typeCommand(commandArgs[0] || "");
         prompt();
       } else {
-        const executablePath = findInPath(commandName);
-        if (executablePath) {
-          // Execute external program with inherited stdio (output shows directly)
-          const child = spawn(executablePath, commandArgs, {
-            stdio: "inherit",
-          });
+        // Execute external program with inherited stdio (output shows directly)
+        const child = spawn(commandName, commandArgs, {
+          stdio: "inherit",
+        });
 
-          child.on("close", () => {
-            prompt();
-          });
+        child.on("close", () => {
+          prompt();
+        });
 
-          child.on("error", () => {
-            console.log(`${commandName}: command not found`);
-            prompt();
-          });
-        } else {
+        child.on("error", () => {
           console.log(`${commandName}: command not found`);
           prompt();
-        }
+        });
       }
     });
   };
