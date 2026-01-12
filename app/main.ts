@@ -153,7 +153,10 @@ async function main(): Promise<void> {
 
     rl.once("line", (input) => {
       input = input.trim();
-      console.log(executeParsedCommand(parseCommand(input)));
+      const output = executeParsedCommand(parseCommand(input));
+      if (output) {
+        console.log(output);
+      }
       prompt();
     });
   };
