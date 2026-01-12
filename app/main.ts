@@ -1,9 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import {spawn} from "child_process";
 import * as readline from "readline";
 
 const BUILT_IN_COMMANDS = ["echo", "type", "exit"];
+const BUILT_IN_OPERATORS = ["|", ">"];
 
 function echoCommand(query: string): void {
     console.log(query);
@@ -45,6 +45,72 @@ function typeCommand(query: string): void {
     }
 }
 
+function handleCommand(commandAndQuery: string): void {
+    const parts = commandAndQuery.split(' ')
+    const command = parts[0];
+    const query = parts.slice(1).join(' ');
+
+    if (command === "echo") {
+        echoCommand(query)
+    } else if (command === "type") {
+        typeCommand(query)
+    }
+
+
+}
+
+function handlePipeCommand(left: string, parsedRight: ParsedCommand): void {
+    return
+}
+
+function handleUnionCommand(left: string, parsedRight: ParsedCommand): void {
+    return
+}
+
+type ParsedCommand = {
+    left: string;
+    operator: string | null;
+    right: ParsedCommand | string;
+}
+
+function parseCommand(input: string): ParsedCommand {
+    const operatorPositions = BUILT_IN_OPERATORS
+        .map(op => ({op, index: input.indexOf(op)}))
+        .filter(x => x.index !== -1);
+
+    if (operatorPositions.length === 0) {
+        return {left: input, operator: null, right: ""};
+    }
+
+    // Find the first operator
+    const {op: operator, index: minIndex} = operatorPositions.reduce((a, b) =>
+        a.index < b.index ? a : b
+    );
+
+    const left = input.substring(0, minIndex).trim();
+    const right = input.substring(minIndex + operator.length).trim();
+
+
+    if (operator !== null) {
+        const parsedRight = parseCommand(right)
+
+        if (operator === "|") {
+            handlePipeCommand(left, parsedRight)
+        }
+
+        if (operator === ">") {
+            handleUnionCommand(left, parsedRight)
+        }
+
+        return {left, operator, right: parsedRight}
+    }
+
+    handleCommand(left);
+
+
+    return {left, operator, right};
+}
+
 async function main(): Promise<void> {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -56,44 +122,8 @@ async function main(): Promise<void> {
 
         rl.once("line", (input) => {
             input = input.trim();
-
-            if (input === "exit") {
-                rl.close();
-                return;
-            }
-
-            const parts = input.split(/\s+/);
-            const commandName = parts[0];
-            const commandArgs = parts.slice(1);
-
-            if (commandName === "echo") {
-                echoCommand(commandArgs.join(" "));
-                prompt();
-            } else if (commandName === "type") {
-                typeCommand(commandArgs[0] || "");
-                prompt();
-            } else {
-                // Check if command exists in PATH, then execute
-                const executablePath = findInPath(commandName);
-                if (executablePath) {
-                    // Execute external program with inherited stdio
-                    const child = spawn(commandName, commandArgs, {
-                        stdio: "inherit",
-                    });
-
-                    child.on("close", () => {
-                        prompt();
-                    });
-
-                    child.on("error", () => {
-                        console.log(`${commandName}: command not found`);
-                        prompt();
-                    });
-                } else {
-                    console.log(`${commandName}: command not found`);
-                    prompt();
-                }
-            }
+            parseCommand(input);
+            prompt();
         });
     };
 
