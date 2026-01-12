@@ -71,6 +71,7 @@ function runExternalCommand(
   const result = spawnSync(command, args, {
     input: input,
     encoding: "utf-8",
+    stdio: ["pipe", "pipe", "inherit"],
   });
 
   if (result.error) {
