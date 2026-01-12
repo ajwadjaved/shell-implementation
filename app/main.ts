@@ -179,10 +179,8 @@ function handleRedirectError(
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
-  if (leftResult.stderr) {
-    const filename = parsedRight.left.trim();
-    fs.writeFileSync(filename, leftResult.stderr);
-  }
+  const filename = parsedRight.left.trim();
+  fs.writeFileSync(filename, leftResult.stderr);
   return { stdout: leftResult.stdout, stderr: "" };
 }
 
