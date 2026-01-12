@@ -45,7 +45,7 @@ function parseParts(input: string): [string, string] {
 }
 
 function echoCommand(query: string): string {
-  return query;
+  return query + "\n";
 }
 
 function typeCommand(query: string): string {
