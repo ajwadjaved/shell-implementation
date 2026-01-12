@@ -154,6 +154,10 @@ function executeParsedCommand(parsed: ParsedCommand): CommandOutput {
     return handleRedirectInput(parsed.left, parsed.right as ParsedCommand);
   }
 
+  if (parsed.operator === ">>") {
+    return handleAppendStdout(parsed.left, parsed.right as ParsedCommand);
+  }
+
   if (parsed.operator === "2>") {
     return handleRedirectError(parsed.left, parsed.right as ParsedCommand);
   }
@@ -182,6 +186,18 @@ function handleRedirectInput(
 
   const filename = parsedRight.left.trim();
   fs.writeFileSync(filename, leftResult.stdout);
+  return { stdout: "", stderr: leftResult.stderr };
+}
+
+function handleAppendStdout(
+  left: string,
+  parsedRight: ParsedCommand,
+): CommandOutput {
+  const [leftCommand, leftArgs] = parseParts(left);
+  const leftResult = handleCommand(leftCommand, leftArgs);
+
+  const filename = parsedRight.left.trim();
+  fs.appendFileSync(filename, leftResult.stdout);
   return { stdout: "", stderr: leftResult.stderr };
 }
 
