@@ -155,7 +155,7 @@ async function main(): Promise<void> {
       input = input.trim();
       const output = executeParsedCommand(parseCommand(input));
       if (output) {
-        console.log(output);
+        process.stdout.write(output);
       }
       prompt();
     });
