@@ -33,7 +33,12 @@ function findInPath(command: string): string | null {
 
 function parseParts(input: string): [string, string] {
   const parts = input.split(" ");
-  return [parts[0], parts.slice(1).join(" ")];
+  let args = parts.slice(1).join(" ");
+
+  // Strip surrounding quotes from arguments
+  args = args.replace(/^['"](.+)['"]$/s, "$1");
+
+  return [parts[0], args];
 }
 
 function echoCommand(query: string): string {
