@@ -4,7 +4,7 @@ import * as path from "path";
 import * as readline from "readline";
 
 const BUILT_IN_COMMANDS = ["echo", "type", "exit"];
-const BUILT_IN_OPERATORS = ["|", "1>", ">", "2>", ">>", "1>>"];
+const BUILT_IN_OPERATORS = ["|", "1>", ">", "2>", ">>", "1>>", "2>>"];
 
 type ParsedCommand = {
   left: string;
@@ -161,6 +161,9 @@ function executeParsedCommand(parsed: ParsedCommand): CommandOutput {
   if (parsed.operator === "2>") {
     return handleRedirectError(parsed.left, parsed.right as ParsedCommand);
   }
+  if (parsed.operator === "2>>") {
+    return handleRedirectAppend(parsed.left, parsed.right as ParsedCommand);
+  }
 
   return { stdout: "", stderr: "" };
 }
@@ -210,6 +213,18 @@ function handleRedirectError(
 
   const filename = parsedRight.left.trim();
   fs.writeFileSync(filename, leftResult.stderr);
+  return { stdout: leftResult.stdout, stderr: "" };
+}
+
+function handleRedirectAppend(
+  left: string,
+  parsedRight: ParsedCommand,
+): CommandOutput {
+  const [leftCommand, leftArgs] = parseParts(left);
+  const leftResult = handleCommand(leftCommand, leftArgs);
+
+  const filename = parsedRight.left.trim();
+  fs.appendFileSync(filename, leftResult.stderr);
   return { stdout: leftResult.stdout, stderr: "" };
 }
 
