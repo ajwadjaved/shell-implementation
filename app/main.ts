@@ -133,12 +133,13 @@ function handlePipeCommand(left: string, parsedRight: ParsedCommand): string {
   return runExternalCommand(rightCommand, [rightArgs], leftResult);
 }
 
-function handleUnionCommand(left: string, parsedRight: ParsedCommand): void {
+function handleUnionCommand(left: string, parsedRight: ParsedCommand): string {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
   const filename = parsedRight.left.trim();
   fs.writeFileSync(filename, leftResult);
+  return "";
 }
 
 async function main(): Promise<void> {
