@@ -75,7 +75,10 @@ function runExternalCommand(
   });
 
   if (result.error) {
-    return `Error: ${result.error.message}`;
+    if ((result.error as any).code === "ENOENT") {
+      return `${command}: command not found\n`;
+    }
+    return `Error: ${result.error.message}\n`;
   }
 
   return result.stdout;
