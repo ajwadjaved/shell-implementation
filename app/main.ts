@@ -4,12 +4,17 @@ import * as path from "path";
 import * as readline from "readline";
 
 const BUILT_IN_COMMANDS = ["echo", "type", "exit"];
-const BUILT_IN_OPERATORS = ["|", "1>", "2>", ">"];
+const BUILT_IN_OPERATORS = ["|", "1>", ">", "2>"];
 
 type ParsedCommand = {
   left: string;
   operator: string | null;
   right: ParsedCommand | string;
+};
+
+type CommandOutput = {
+  stdout: string;
+  stderr?: string;
 };
 
 function findInPath(command: string): string | null {
@@ -36,30 +41,32 @@ function parseParts(input: string): [string, string] {
   let args = parts.slice(1).join(" ");
 
   // Strip surrounding quotes from arguments
-  if ((args.startsWith("'") && args.endsWith("'")) ||
-      (args.startsWith('"') && args.endsWith('"'))) {
+  if (
+    (args.startsWith("'") && args.endsWith("'")) ||
+    (args.startsWith('"') && args.endsWith('"'))
+  ) {
     args = args.slice(1, -1);
   }
 
   return [parts[0], args];
 }
 
-function echoCommand(query: string): string {
-  return query + "\n";
+function echoCommand(query: string): CommandOutput {
+  return { stdout: query + "\n", stderr: "" };
 }
 
-function typeCommand(query: string): string {
+function typeCommand(query: string): CommandOutput {
   // Check if it's a builtin first
   if (BUILT_IN_COMMANDS.includes(query)) {
-    return `${query} is a shell builtin\n`;
+    return { stdout: `${query} is a shell builtin\n` };
   }
 
   // Search through PATH
   const executablePath = findInPath(query);
   if (executablePath) {
-    return `${query} is ${executablePath}\n`;
+    return { stdout: `${query} is ${executablePath}\n` };
   } else {
-    return `${query}: not found\n`;
+    return { stdout: `${query}: not found\n` };
   }
 }
 
@@ -67,24 +74,20 @@ function runExternalCommand(
   command: string,
   args: string[],
   input?: string,
-): string {
+): CommandOutput {
   const result = spawnSync(command, args, {
     input: input,
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "inherit"],
   });
 
-  if (result.error) {
-    if ((result.error as any).code === "ENOENT") {
-      return `${command}: command not found\n`;
-    }
-    return `Error: ${result.error.message}\n`;
-  }
-
-  return result.stdout;
+  return {
+    stdout: result.stdout,
+    stderr: result.stderr,
+  };
 }
 
-function handleCommand(command: string, query: string): string {
+function handleCommand(command: string, query: string): CommandOutput {
   if (command === "echo") {
     return echoCommand(query);
   }
@@ -134,8 +137,12 @@ function executeParsedCommand(parsed: ParsedCommand): string {
     return handlePipeCommand(parsed.left, parsed.right as ParsedCommand);
   }
 
-  if (parsed.operator?.includes(">")) {
-    return handleUnionCommand(parsed.left, parsed.right as ParsedCommand);
+  if (parsed.operator === ">" || parsed.operator === "1>") {
+    return handleRedirectInput(parsed.left, parsed.right as ParsedCommand);
+  }
+
+  if (parsed.operator === "2>") {
+    return handleRedirectError(parsed.left, parsed.right as ParsedCommand);
   }
 }
 
@@ -148,7 +155,16 @@ function handlePipeCommand(left: string, parsedRight: ParsedCommand): string {
   return runExternalCommand(rightCommand, [rightArgs], leftResult);
 }
 
-function handleUnionCommand(left: string, parsedRight: ParsedCommand): string {
+function handleRedirectInput(left: string, parsedRight: ParsedCommand): string {
+  const [leftCommand, leftArgs] = parseParts(left);
+  const leftResult = handleCommand(leftCommand, leftArgs);
+
+  const filename = parsedRight.left.trim();
+  fs.writeFileSync(filename, leftResult);
+  return "";
+}
+
+function handleRedirectError(left: string, parsedRight: ParsedCommand): string {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
