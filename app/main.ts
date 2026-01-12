@@ -78,12 +78,12 @@ function runExternalCommand(
   const result = spawnSync(command, args, {
     input: input,
     encoding: "utf-8",
-    stdio: ["pipe", "pipe", "inherit"],
+    stdio: ["pipe", "pipe", "pipe"],
   });
 
   return {
-    stdout: result.stdout,
-    stderr: result.stderr,
+    stdout: result.stdout || "",
+    stderr: result.stderr || "",
   };
 }
 
@@ -127,7 +127,7 @@ function parseCommand(input: string): ParsedCommand {
   return { left, operator, right };
 }
 
-function executeParsedCommand(parsed: ParsedCommand): string {
+function executeParsedCommand(parsed: ParsedCommand): CommandOutput {
   if (parsed.operator === null) {
     const [command, args] = parseParts(parsed.left);
     return handleCommand(command, args);
@@ -144,33 +144,37 @@ function executeParsedCommand(parsed: ParsedCommand): string {
   if (parsed.operator === "2>") {
     return handleRedirectError(parsed.left, parsed.right as ParsedCommand);
   }
+
+  return { stdout: "", stderr: "" };
 }
 
-function handlePipeCommand(left: string, parsedRight: ParsedCommand): string {
+function handlePipeCommand(left: string, parsedRight: ParsedCommand): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
   const [rightCommand, rightArgs] = parseParts(parsedRight.left);
 
-  return runExternalCommand(rightCommand, [rightArgs], leftResult);
+  return runExternalCommand(rightCommand, [rightArgs], leftResult.stdout);
 }
 
-function handleRedirectInput(left: string, parsedRight: ParsedCommand): string {
+function handleRedirectInput(left: string, parsedRight: ParsedCommand): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
   const filename = parsedRight.left.trim();
-  fs.writeFileSync(filename, leftResult);
-  return "";
+  fs.writeFileSync(filename, leftResult.stdout);
+  return { stdout: "", stderr: "" };
 }
 
-function handleRedirectError(left: string, parsedRight: ParsedCommand): string {
+function handleRedirectError(left: string, parsedRight: ParsedCommand): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
-  const filename = parsedRight.left.trim();
-  fs.writeFileSync(filename, leftResult);
-  return "";
+  if (leftResult.stderr) {
+    const filename = parsedRight.left.trim();
+    fs.writeFileSync(filename, leftResult.stderr);
+  }
+  return { stdout: "", stderr: "" };
 }
 
 async function main(): Promise<void> {
@@ -184,9 +188,9 @@ async function main(): Promise<void> {
 
     rl.once("line", (input) => {
       input = input.trim();
-      const output = executeParsedCommand(parseCommand(input));
-      if (output) {
-        process.stdout.write(output);
+      const result = executeParsedCommand(parseCommand(input));
+      if (result.stdout) {
+        process.stdout.write(result.stdout);
       }
       prompt();
     });
