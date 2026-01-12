@@ -51,15 +51,15 @@ function echoCommand(query: string): string {
 function typeCommand(query: string): string {
   // Check if it's a builtin first
   if (BUILT_IN_COMMANDS.includes(query)) {
-    return `${query} is a shell builtin`;
+    return `${query} is a shell builtin\n`;
   }
 
   // Search through PATH
   const executablePath = findInPath(query);
   if (executablePath) {
-    return `${query} is ${executablePath}`;
+    return `${query} is ${executablePath}\n`;
   } else {
-    return `${query}: not found`;
+    return `${query}: not found\n`;
   }
 }
 
