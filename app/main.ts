@@ -120,7 +120,7 @@ function executeParsedCommand(parsed: ParsedCommand): string {
   }
 
   if (parsed.operator === ">") {
-    handleUnionCommand(parsed.left, parsed.right as ParsedCommand);
+    return handleUnionCommand(parsed.left, parsed.right as ParsedCommand);
   }
 }
 
