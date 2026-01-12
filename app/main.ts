@@ -4,7 +4,7 @@ import * as path from "path";
 import * as readline from "readline";
 
 const BUILT_IN_COMMANDS = ["echo", "type", "exit"];
-const BUILT_IN_OPERATORS = ["|", "1>", ">", "2>", ">>"];
+const BUILT_IN_OPERATORS = ["|", "1>", ">", "2>", ">>", "1>>"];
 
 type ParsedCommand = {
   left: string;
