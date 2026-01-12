@@ -84,6 +84,8 @@ function handleCommand(command: string, query: string): string {
   if (command === "type") {
     return typeCommand(query);
   }
+
+  return `${command}: command not found`;
 }
 
 function parseCommand(input: string): ParsedCommand {
