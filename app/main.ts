@@ -127,7 +127,7 @@ function executeParsedCommand(parsed: ParsedCommand): string {
     return handlePipeCommand(parsed.left, parsed.right as ParsedCommand);
   }
 
-  if (parsed.operator === ">") {
+  if (parsed.operator?.includes(">")) {
     return handleUnionCommand(parsed.left, parsed.right as ParsedCommand);
   }
 }
