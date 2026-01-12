@@ -183,7 +183,7 @@ function handleRedirectError(
     const filename = parsedRight.left.trim();
     fs.writeFileSync(filename, leftResult.stderr);
   }
-  return { stdout: "", stderr: "" };
+  return { stdout: leftResult.stdout, stderr: "" };
 }
 
 async function main(): Promise<void> {
