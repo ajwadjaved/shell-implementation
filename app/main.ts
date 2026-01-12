@@ -14,7 +14,7 @@ type ParsedCommand = {
 
 type CommandOutput = {
   stdout: string;
-  stderr?: string;
+  stderr: string;
 };
 
 function findInPath(command: string): string | null {
@@ -58,15 +58,15 @@ function echoCommand(query: string): CommandOutput {
 function typeCommand(query: string): CommandOutput {
   // Check if it's a builtin first
   if (BUILT_IN_COMMANDS.includes(query)) {
-    return { stdout: `${query} is a shell builtin\n` };
+    return { stdout: `${query} is a shell builtin\n`, stderr: "" };
   }
 
   // Search through PATH
   const executablePath = findInPath(query);
   if (executablePath) {
-    return { stdout: `${query} is ${executablePath}\n` };
+    return { stdout: `${query} is ${executablePath}\n`, stderr: "" };
   } else {
-    return { stdout: `${query}: not found\n` };
+    return { stdout: `${query}: not found\n`, stderr: "" };
   }
 }
 
@@ -148,7 +148,10 @@ function executeParsedCommand(parsed: ParsedCommand): CommandOutput {
   return { stdout: "", stderr: "" };
 }
 
-function handlePipeCommand(left: string, parsedRight: ParsedCommand): CommandOutput {
+function handlePipeCommand(
+  left: string,
+  parsedRight: ParsedCommand,
+): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
@@ -157,7 +160,10 @@ function handlePipeCommand(left: string, parsedRight: ParsedCommand): CommandOut
   return runExternalCommand(rightCommand, [rightArgs], leftResult.stdout);
 }
 
-function handleRedirectInput(left: string, parsedRight: ParsedCommand): CommandOutput {
+function handleRedirectInput(
+  left: string,
+  parsedRight: ParsedCommand,
+): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
@@ -166,7 +172,10 @@ function handleRedirectInput(left: string, parsedRight: ParsedCommand): CommandO
   return { stdout: "", stderr: "" };
 }
 
-function handleRedirectError(left: string, parsedRight: ParsedCommand): CommandOutput {
+function handleRedirectError(
+  left: string,
+  parsedRight: ParsedCommand,
+): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
