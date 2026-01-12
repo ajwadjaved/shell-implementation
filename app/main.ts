@@ -81,6 +81,19 @@ function runExternalCommand(
     stdio: ["pipe", "pipe", "pipe"],
   });
 
+  if (result.error) {
+    if ((result.error as any).code === "ENOENT") {
+      return {
+        stdout: "",
+        stderr: `${command}: command not found\n`,
+      };
+    }
+    return {
+      stdout: "",
+      stderr: `Error: ${result.error.message}\n`,
+    };
+  }
+
   return {
     stdout: result.stdout || "",
     stderr: result.stderr || "",
