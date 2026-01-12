@@ -169,7 +169,7 @@ function handleRedirectInput(
 
   const filename = parsedRight.left.trim();
   fs.writeFileSync(filename, leftResult.stdout);
-  return { stdout: "", stderr: "" };
+  return { stdout: "", stderr: leftResult.stderr };
 }
 
 function handleRedirectError(
