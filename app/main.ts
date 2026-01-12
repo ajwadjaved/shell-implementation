@@ -91,6 +91,9 @@ function handleCommand(command: string, query: string): string {
   if (command === "type") {
     return typeCommand(query);
   }
+  if (command === "exit") {
+    process.exit(0);
+  }
 
   return runExternalCommand(command, query.split(" "), "");
 }
