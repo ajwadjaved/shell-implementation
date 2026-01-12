@@ -31,14 +31,9 @@ function findInPath(command: string): string | null {
   return null;
 }
 
-function extractCommand(commandAndQuery: string): string {
-  const parts = commandAndQuery.split(" ");
-  return parts[0];
-}
-
-function extractQuery(commandAndQuery: string): string {
-  const parts = commandAndQuery.split(" ");
-  return parts.slice(1).join(" ");
+function parseParts(input: string): [string, string] {
+  const parts = input.split(" ");
+  return [parts[0], parts.slice(1).join(" ")];
 }
 
 function echoCommand(query: string): string {
@@ -116,33 +111,35 @@ function parseCommand(input: string): ParsedCommand {
 
 function executeParsedCommand(parsed: ParsedCommand): string {
   if (parsed.operator === null) {
-    return handleCommand(
-      extractCommand(parsed.left),
-      extractQuery(parsed.left),
-    );
+    const [command, args] = parseParts(parsed.left);
+    return handleCommand(command, args);
   }
 
   if (parsed.operator === "|") {
     return handlePipeCommand(parsed.left, parsed.right as ParsedCommand);
   }
 
-  // if (parsed.operator === ">") {
-  //   return handleUnionCommand(parsed.left, parsed.right as ParsedCommand);
-  // }
+  if (parsed.operator === ">") {
+    handleUnionCommand(parsed.left, parsed.right as ParsedCommand);
+  }
 }
 
 function handlePipeCommand(left: string, parsedRight: ParsedCommand): string {
-  const leftResult = handleCommand(extractCommand(left), extractQuery(left));
+  const [leftCommand, leftArgs] = parseParts(left);
+  const leftResult = handleCommand(leftCommand, leftArgs);
 
-  const rightCommand = extractCommand(parsedRight.left);
-  const rightArgs = extractQuery(parsedRight.left);
+  const [rightCommand, rightArgs] = parseParts(parsedRight.left);
 
   return runExternalCommand(rightCommand, [rightArgs], leftResult);
 }
 
-// function handleUnionCommand(left: string, parsedRight: ParsedCommand): void {
-//   return;
-// }
+function handleUnionCommand(left: string, parsedRight: ParsedCommand): void {
+  const [leftCommand, leftArgs] = parseParts(left);
+  const leftResult = handleCommand(leftCommand, leftArgs);
+
+  const filename = parsedRight.left.trim();
+  fs.writeFileSync(filename, leftResult);
+}
 
 async function main(): Promise<void> {
   const rl = readline.createInterface({
