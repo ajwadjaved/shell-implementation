@@ -36,7 +36,10 @@ function parseParts(input: string): [string, string] {
   let args = parts.slice(1).join(" ");
 
   // Strip surrounding quotes from arguments
-  args = args.replace(/^['"](.+)['"]$/s, "$1");
+  if ((args.startsWith("'") && args.endsWith("'")) ||
+      (args.startsWith('"') && args.endsWith('"'))) {
+    args = args.slice(1, -1);
+  }
 
   return [parts[0], args];
 }
