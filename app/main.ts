@@ -154,7 +154,7 @@ function executeParsedCommand(parsed: ParsedCommand): CommandOutput {
     return handleRedirectInput(parsed.left, parsed.right as ParsedCommand);
   }
 
-  if (parsed.operator === ">>") {
+  if (parsed.operator === ">>" || parsed.operator === "1>>") {
     return handleAppendStdout(parsed.left, parsed.right as ParsedCommand);
   }
 
