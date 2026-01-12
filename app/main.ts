@@ -1,10 +1,22 @@
+// ============================================================================
+// SHELL IMPLEMENTATION
+// ============================================================================
+
 import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 const BUILT_IN_COMMANDS = ["echo", "type", "exit"];
 const BUILT_IN_OPERATORS = ["|", "1>", ">", "2>", ">>", "1>>", "2>>"];
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 type ParsedCommand = {
   left: string;
@@ -16,6 +28,10 @@ type CommandOutput = {
   stdout: string;
   stderr: string;
 };
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
 function findInPath(command: string): string | null {
   const pathEnv = process.env.PATH || "";
@@ -51,6 +67,10 @@ function parseParts(input: string): [string, string] {
   return [parts[0], args];
 }
 
+// ============================================================================
+// BUILT-IN COMMANDS
+// ============================================================================
+
 function echoCommand(query: string): CommandOutput {
   return { stdout: query + "\n", stderr: "" };
 }
@@ -69,6 +89,10 @@ function typeCommand(query: string): CommandOutput {
     return { stdout: `${query}: not found\n`, stderr: "" };
   }
 }
+
+// ============================================================================
+// EXTERNAL COMMAND EXECUTION
+// ============================================================================
 
 function runExternalCommand(
   command: string,
@@ -99,6 +123,10 @@ function runExternalCommand(
     stderr: result.stderr || "",
   };
 }
+
+// ============================================================================
+// COMMAND PARSING AND EXECUTION
+// ============================================================================
 
 function handleCommand(command: string, query: string): CommandOutput {
   if (command === "echo") {
@@ -150,23 +178,52 @@ function executeParsedCommand(parsed: ParsedCommand): CommandOutput {
     return handlePipeCommand(parsed.left, parsed.right as ParsedCommand);
   }
 
+  // Redirect stdout: > or 1>
   if (parsed.operator === ">" || parsed.operator === "1>") {
-    return handleRedirectInput(parsed.left, parsed.right as ParsedCommand);
+    return redirectOutput(
+      parsed.left,
+      parsed.right as ParsedCommand,
+      "write",
+      "stdout",
+    );
   }
 
+  // Append stdout: >> or 1>>
   if (parsed.operator === ">>" || parsed.operator === "1>>") {
-    return handleAppendStdout(parsed.left, parsed.right as ParsedCommand);
+    return redirectOutput(
+      parsed.left,
+      parsed.right as ParsedCommand,
+      "append",
+      "stdout",
+    );
   }
 
+  // Redirect stderr: 2>
   if (parsed.operator === "2>") {
-    return handleRedirectError(parsed.left, parsed.right as ParsedCommand);
+    return redirectOutput(
+      parsed.left,
+      parsed.right as ParsedCommand,
+      "write",
+      "stderr",
+    );
   }
+
+  // Append stderr: 2>>
   if (parsed.operator === "2>>") {
-    return handleRedirectAppend(parsed.left, parsed.right as ParsedCommand);
+    return redirectOutput(
+      parsed.left,
+      parsed.right as ParsedCommand,
+      "append",
+      "stderr",
+    );
   }
 
   return { stdout: "", stderr: "" };
 }
+
+// ============================================================================
+// OPERATOR HANDLERS
+// ============================================================================
 
 function handlePipeCommand(
   left: string,
@@ -180,58 +237,57 @@ function handlePipeCommand(
   return runExternalCommand(rightCommand, [rightArgs], leftResult.stdout);
 }
 
-function handleRedirectInput(
+/**
+ * Redirect output to a file (write or append mode)
+ * @param mode "write" (>) or "append" (>>)
+ * @param stream "stdout" (1> or >>) or "stderr" (2> or 2>>)
+ */
+function redirectOutput(
   left: string,
   parsedRight: ParsedCommand,
+  mode: "write" | "append",
+  stream: "stdout" | "stderr",
 ): CommandOutput {
   const [leftCommand, leftArgs] = parseParts(left);
   const leftResult = handleCommand(leftCommand, leftArgs);
 
   const filename = parsedRight.left.trim();
-  fs.writeFileSync(filename, leftResult.stdout);
-  return { stdout: "", stderr: leftResult.stderr };
+  const content = stream === "stdout" ? leftResult.stdout : leftResult.stderr;
+
+  if (mode === "write") {
+    fs.writeFileSync(filename, content);
+  } else {
+    fs.appendFileSync(filename, content);
+  }
+
+  // When redirecting stdout, pass through stderr (so errors still print)
+  // When redirecting stderr, pass through stdout (so output still prints)
+  if (stream === "stdout") {
+    return { stdout: "", stderr: leftResult.stderr };
+  } else {
+    return { stdout: leftResult.stdout, stderr: "" };
+  }
 }
 
-function handleAppendStdout(
-  left: string,
-  parsedRight: ParsedCommand,
-): CommandOutput {
-  const [leftCommand, leftArgs] = parseParts(left);
-  const leftResult = handleCommand(leftCommand, leftArgs);
+// ============================================================================
+// Completer
+// ============================================================================
 
-  const filename = parsedRight.left.trim();
-  fs.appendFileSync(filename, leftResult.stdout);
-  return { stdout: "", stderr: leftResult.stderr };
+function completer(line: string): [string[], string] {
+  const builtins = ["echo", "exit"];
+  const matches = builtins.filter(cmd => cmd.startsWith(line)).map(cmd => cmd + " ");
+  return [matches, line];
 }
 
-function handleRedirectError(
-  left: string,
-  parsedRight: ParsedCommand,
-): CommandOutput {
-  const [leftCommand, leftArgs] = parseParts(left);
-  const leftResult = handleCommand(leftCommand, leftArgs);
-
-  const filename = parsedRight.left.trim();
-  fs.writeFileSync(filename, leftResult.stderr);
-  return { stdout: leftResult.stdout, stderr: "" };
-}
-
-function handleRedirectAppend(
-  left: string,
-  parsedRight: ParsedCommand,
-): CommandOutput {
-  const [leftCommand, leftArgs] = parseParts(left);
-  const leftResult = handleCommand(leftCommand, leftArgs);
-
-  const filename = parsedRight.left.trim();
-  fs.appendFileSync(filename, leftResult.stderr);
-  return { stdout: leftResult.stdout, stderr: "" };
-}
+// ============================================================================
+// REPL (READ-EVAL-PRINT LOOP)
+// ============================================================================
 
 async function main(): Promise<void> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
+    completer: completer,
   });
 
   const prompt = (): void => {
