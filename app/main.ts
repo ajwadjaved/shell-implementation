@@ -80,7 +80,7 @@ function handleCommand(command: string, query: string): string {
     return typeCommand(query);
   }
 
-  return `${command}: command not found`;
+  return runExternalCommand(command, query.split(" "), "");
 }
 
 function parseCommand(input: string): ParsedCommand {
