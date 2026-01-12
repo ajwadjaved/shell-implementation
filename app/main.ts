@@ -199,6 +199,9 @@ async function main(): Promise<void> {
       if (result.stdout) {
         process.stdout.write(result.stdout);
       }
+      if (result.stderr) {
+        process.stderr.write(result.stderr);
+      }
       prompt();
     });
   };
