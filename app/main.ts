@@ -275,7 +275,13 @@ function redirectOutput(
 
 function completer(line: string): [string[], string] {
   const builtins = ["echo", "exit"];
-  const matches = builtins.filter(cmd => cmd.startsWith(line)).map(cmd => cmd + " ");
+  const matches = builtins
+    .filter((cmd) => cmd.startsWith(line))
+    .map((cmd) => cmd + " ");
+
+  if (matches.length === 0 && line.length > 0) {
+    process.stdout.write("\x07");
+  }
   return [matches, line];
 }
 
