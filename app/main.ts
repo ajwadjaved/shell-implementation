@@ -273,6 +273,9 @@ function redirectOutput(
 // COMPLETER (TAB AUTOCOMPLETION)
 // ============================================================================
 
+let lastCompletionInput = "";
+let lastCompletionMatches: string[] = [];
+
 function getExecutablesStartingWith(prefix: string): string[] {
   const executables: string[] = [];
   const pathDirs = process.env.PATH?.split(":") || [];
@@ -322,15 +325,27 @@ function completer(line: string): [string[], string] {
   // Combine all matches
   const allMatches = [...new Set([...builtinMatches, ...executableMatches])];
 
+  // Check if this is a second TAB on same input at a boundary
+  if (line === lastCompletionInput && lastCompletionMatches.length > 1) {
+    // Second TAB at boundary: show all matches
+    const sortedMatches = lastCompletionMatches.sort();
+    const matchDisplay = sortedMatches.join("  ");
+    process.stdout.write("\n" + matchDisplay + "\n$ " + line);
+    lastCompletionInput = "";
+    return [[], line];
+  }
+
   if (allMatches.length === 0) {
     if (line.length > 0) {
       process.stdout.write("\x07"); // Ring bell if no matches
     }
+    lastCompletionInput = "";
     return [[], line];
   }
 
   if (allMatches.length === 1) {
     // Single match: return with trailing space to complete it
+    lastCompletionInput = "";
     return [[allMatches[0] + " "], line];
   }
 
@@ -338,12 +353,16 @@ function completer(line: string): [string[], string] {
   const lcp = getLongestCommonPrefix(allMatches);
 
   if (lcp === line) {
-    // At divergence point: all remaining matches differ
+    // At divergence point: store for potential second TAB
+    lastCompletionInput = line;
+    lastCompletionMatches = allMatches;
     process.stdout.write("\x07");
     return [[], line];
   }
 
-  // Return LCP to auto-complete to the longest common prefix
+  // Progressing to LCP: reset state and auto-complete
+  lastCompletionInput = "";
+  lastCompletionMatches = [];
   return [[lcp], line];
 }
 
