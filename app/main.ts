@@ -320,7 +320,7 @@ function completer(line: string): [string[], string] {
       .map((m) => m.trim())
       .sort();
     const matchDisplay = sortedMatches.join("  ");
-    process.stdout.write("\n" + matchDisplay + "\n");
+    process.stdout.write("\n" + matchDisplay + "\n$ " + line);
     lastCompletionInput = "";
     return [[], line];
   }
