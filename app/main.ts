@@ -270,19 +270,51 @@ function redirectOutput(
 }
 
 // ============================================================================
-// Completer
+// COMPLETER (TAB AUTOCOMPLETION)
 // ============================================================================
+
+function getExecutablesStartingWith(prefix: string): string[] {
+  const executables: string[] = [];
+  const pathDirs = process.env.PATH?.split(":") || [];
+
+  for (const dir of pathDirs) {
+    try {
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        if (file.startsWith(prefix)) {
+          // Check if executable
+          const fullPath = path.join(dir, file);
+          const stats = fs.statSync(fullPath);
+          if (stats.isFile() && (stats.mode & 0o111) !== 0) {
+            executables.push(file + " ");
+          }
+        }
+      }
+    } catch (e) {
+      // Directory doesn't exist or not readable, skip it
+    }
+  }
+
+  return [...new Set(executables)]; // Remove duplicates
+}
 
 function completer(line: string): [string[], string] {
   const builtins = ["echo", "exit"];
-  const matches = builtins
+  const builtinMatches = builtins
     .filter((cmd) => cmd.startsWith(line))
     .map((cmd) => cmd + " ");
 
-  if (matches.length === 0 && line.length > 0) {
-    process.stdout.write("\x07");
+  // Get executables from PATH
+  const executableMatches = getExecutablesStartingWith(line);
+
+  // Combine and keep builtins first, then executables
+  const allMatches = [...new Set([...builtinMatches, ...executableMatches])];
+
+  if (allMatches.length === 0 && line.length > 0) {
+    process.stdout.write("\x07"); // Ring bell if no matches
   }
-  return [matches, line];
+
+  return [allMatches, line];
 }
 
 // ============================================================================
