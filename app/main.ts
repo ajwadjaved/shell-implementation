@@ -1,6 +1,43 @@
 // ============================================================================
 // SHELL IMPLEMENTATION
 // ============================================================================
+//
+// A fully functional POSIX-compliant shell with support for:
+//
+// BUILT-IN COMMANDS:
+//   - echo: Output text to stdout
+//   - type: Display command type (builtin or PATH location)
+//   - exit: Exit the shell
+//
+// OPERATORS:
+//   - Pipes (|): Chain commands, pass stdout of left command to stdin of right
+//   - Output Redirection (>): Redirect stdout to file (overwrite)
+//   - Output Append (>>): Redirect stdout to file (append)
+//   - Output Redirect with prefix (1>): Same as > (explicit stdout)
+//   - Output Append with prefix (1>>): Same as >> (explicit stdout)
+//   - Stderr Redirection (2>): Redirect stderr to file (overwrite)
+//   - Stderr Append (2>>): Redirect stderr to file (append)
+//
+// COMMAND EXECUTION:
+//   - Run external programs from PATH
+//   - Pass arguments to external programs
+//   - Handle stderr and stdout separately
+//   - Proper error messages for missing executables
+//
+// TAB COMPLETION:
+//   - Builtin command completion (echo, exit)
+//   - Executable completion from PATH directories
+//   - Longest Common Prefix (LCP) auto-completion for progressive completion
+//   - Multiple match display when completions diverge
+//   - Bell feedback for ambiguous or missing completions
+//
+// FEATURES:
+//   - Interactive REPL with $ prompt
+//   - Full readline support with history and editing
+//   - Recursive command parsing for complex pipelines and redirects
+//   - Proper quote handling for arguments
+//   - Error handling for missing files and invalid commands
+// ============================================================================
 
 import { spawnSync } from "child_process";
 import * as fs from "fs";
