@@ -273,6 +273,9 @@ function redirectOutput(
 // COMPLETER (TAB AUTOCOMPLETION)
 // ============================================================================
 
+let lastCompletionInput = "";
+let lastCompletionMatches: string[] = [];
+
 function getExecutablesStartingWith(prefix: string): string[] {
   const executables: string[] = [];
   const pathDirs = process.env.PATH?.split(":") || [];
@@ -310,10 +313,34 @@ function completer(line: string): [string[], string] {
   // Combine and keep builtins first, then executables
   const allMatches = [...new Set([...builtinMatches, ...executableMatches])];
 
-  if (allMatches.length === 0 && line.length > 0) {
-    process.stdout.write("\x07"); // Ring bell if no matches
+  // Check if this is a second TAB on the same input with multiple matches
+  if (line === lastCompletionInput && lastCompletionMatches.length > 1) {
+    // Second TAB: show the matches in alphabetical order
+    const sortedMatches = lastCompletionMatches
+      .map((m) => m.trim())
+      .sort();
+    const matchDisplay = sortedMatches.join("  ");
+    process.stdout.write("\n" + matchDisplay + "\n");
+    lastCompletionInput = "";
+    return [[], line];
   }
 
+  // Store current state for potential next TAB press
+  lastCompletionInput = line;
+  lastCompletionMatches = allMatches;
+
+  if (allMatches.length > 1) {
+    // First TAB with multiple matches: ring bell only
+    process.stdout.write("\x07");
+    return [[], line];
+  }
+
+  if (allMatches.length === 0 && line.length > 0) {
+    process.stdout.write("\x07"); // Ring bell if no matches
+    return [[], line];
+  }
+
+  // Single match or no matches with empty input: return for auto-completion
   return [allMatches, line];
 }
 
