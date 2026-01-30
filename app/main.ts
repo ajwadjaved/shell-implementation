@@ -273,9 +273,6 @@ function redirectOutput(
 // COMPLETER (TAB AUTOCOMPLETION)
 // ============================================================================
 
-let lastCompletionInput = "";
-let lastCompletionMatches: string[] = [];
-
 function getExecutablesStartingWith(prefix: string): string[] {
   const executables: string[] = [];
   const pathDirs = process.env.PATH?.split(":") || [];
@@ -289,7 +286,7 @@ function getExecutablesStartingWith(prefix: string): string[] {
           const fullPath = path.join(dir, file);
           const stats = fs.statSync(fullPath);
           if (stats.isFile() && (stats.mode & 0o111) !== 0) {
-            executables.push(file + " ");
+            executables.push(file);
           }
         }
       }
@@ -301,47 +298,53 @@ function getExecutablesStartingWith(prefix: string): string[] {
   return [...new Set(executables)]; // Remove duplicates
 }
 
+function getLongestCommonPrefix(strings: string[]): string {
+  if (strings.length === 0) return "";
+  if (strings.length === 1) return strings[0];
+
+  for (let i = 0; i < strings[0].length; i++) {
+    const char = strings[0][i];
+    if (!strings.every((s) => s[i] === char)) {
+      return strings[0].substring(0, i);
+    }
+  }
+
+  return strings[0];
+}
+
 function completer(line: string): [string[], string] {
   const builtins = ["echo", "exit"];
-  const builtinMatches = builtins
-    .filter((cmd) => cmd.startsWith(line))
-    .map((cmd) => cmd + " ");
+  const builtinMatches = builtins.filter((cmd) => cmd.startsWith(line));
 
   // Get executables from PATH
   const executableMatches = getExecutablesStartingWith(line);
 
-  // Combine and keep builtins first, then executables
+  // Combine all matches
   const allMatches = [...new Set([...builtinMatches, ...executableMatches])];
 
-  // Check if this is a second TAB on the same input with multiple matches
-  if (line === lastCompletionInput && lastCompletionMatches.length > 1) {
-    // Second TAB: show the matches in alphabetical order
-    const sortedMatches = lastCompletionMatches
-      .map((m) => m.trim())
-      .sort();
-    const matchDisplay = sortedMatches.join("  ");
-    process.stdout.write("\n" + matchDisplay + "\n$ " + line);
-    lastCompletionInput = "";
+  if (allMatches.length === 0) {
+    if (line.length > 0) {
+      process.stdout.write("\x07"); // Ring bell if no matches
+    }
     return [[], line];
   }
 
-  // Store current state for potential next TAB press
-  lastCompletionInput = line;
-  lastCompletionMatches = allMatches;
+  if (allMatches.length === 1) {
+    // Single match: return with trailing space to complete it
+    return [[allMatches[0] + " "], line];
+  }
 
-  if (allMatches.length > 1) {
-    // First TAB with multiple matches: ring bell only
+  // Multiple matches: find longest common prefix
+  const lcp = getLongestCommonPrefix(allMatches);
+
+  if (lcp === line) {
+    // At divergence point: all remaining matches differ
     process.stdout.write("\x07");
     return [[], line];
   }
 
-  if (allMatches.length === 0 && line.length > 0) {
-    process.stdout.write("\x07"); // Ring bell if no matches
-    return [[], line];
-  }
-
-  // Single match or no matches with empty input: return for auto-completion
-  return [allMatches, line];
+  // Return LCP to auto-complete to the longest common prefix
+  return [[lcp], line];
 }
 
 // ============================================================================
